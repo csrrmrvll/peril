@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 
@@ -9,20 +10,18 @@ import (
 )
 
 func main() {
-	fmt.Println("Starting Peril server...")
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	const rabbitConnString = "amqp://guest:guest@localhost:5672/"
+
+	conn, err := amqp.Dial(rabbitConnString)
 	if err != nil {
-		panic(err)
+		log.Fatalf("could not connect to RabbitMQ: %v", err)
 	}
 	defer conn.Close()
-
-	fmt.Println("Connected to RabbitMQ")
+	fmt.Println("Peril game server connected to RabbitMQ!")
 
 	// wait for ctrl+c
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 	<-signalChan
-
-	fmt.Println("Shutting down Peril server...")
-	os.Exit(0)
+	fmt.Println("RabbitMQ connection closed.")
 }
