@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/csrrmrvll/peril/internal/pubsub"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -18,6 +20,21 @@ func main() {
 	}
 	defer conn.Close()
 	fmt.Println("Peril game server connected to RabbitMQ!")
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Fatalf("could not open channel: %v", err)
+	}
+	defer ch.Close()
+
+	err = pubsub.PublishJSON(ch, "exchange_name", "routing_key", struct {
+		Message string `json:"message"`
+	}{
+		Message: "Hello, RabbitMQ!",
+	})
+	if err != nil {
+		log.Fatalf("could not publish message: %v", err)
+	}
 
 	// wait for ctrl+c
 	signalChan := make(chan os.Signal, 1)
