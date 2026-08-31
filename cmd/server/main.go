@@ -3,19 +3,14 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 
 	"github.com/csrrmrvll/peril/internal/gamelogic"
 	"github.com/csrrmrvll/peril/internal/pubsub"
 	"github.com/csrrmrvll/peril/internal/routing"
-
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func main() {
-	gamelogic.PrintServerHelp()
-
 	const rabbitConnString = "amqp://guest:guest@localhost:5672/"
 
 	conn, err := amqp.Dial(rabbitConnString)
@@ -25,40 +20,50 @@ func main() {
 	defer conn.Close()
 	fmt.Println("Peril game server connected to RabbitMQ!")
 
-	ch, err := conn.Channel()
+	publishCh, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("could not open channel: %v", err)
+		log.Fatalf("could not create channel: %v", err)
 	}
-	defer ch.Close()
+
+	gamelogic.PrintServerHelp()
 
 	for {
 		words := gamelogic.GetInput()
 		if len(words) == 0 {
 			continue
 		}
-		if words[0] == "pause" {
-			err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey,
-				routing.PlayingState{IsPaused: true})
+		switch words[0] {
+		case "pause":
+			fmt.Println("Publishing paused game state")
+			err = pubsub.PublishJSON(
+				publishCh,
+				routing.ExchangePerilDirect,
+				routing.PauseKey,
+				routing.PlayingState{
+					IsPaused: true,
+				},
+			)
 			if err != nil {
-				log.Fatalf("could not publish message: %v", err)
+				log.Printf("could not publish time: %v", err)
 			}
-		} else if words[0] == "resume" {
-			err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey,
-				routing.PlayingState{IsPaused: false})
+		case "resume":
+			fmt.Println("Publishing resumes game state")
+			err = pubsub.PublishJSON(
+				publishCh,
+				routing.ExchangePerilDirect,
+				routing.PauseKey,
+				routing.PlayingState{
+					IsPaused: false,
+				},
+			)
 			if err != nil {
-				log.Fatalf("could not publish message: %v", err)
+				log.Printf("could not publish time: %v", err)
 			}
-		} else if words[0] == "quit" {
-			log.Println("Quitting server...")
-			break
-		} else {
-			log.Println("Unknown command")
+		case "quit":
+			log.Println("goodbye")
+			return
+		default:
+			fmt.Println("unknown command")
 		}
 	}
-
-	// wait for ctrl+c
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
-	fmt.Println("RabbitMQ connection closed.")
 }
