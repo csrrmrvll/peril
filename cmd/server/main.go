@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/csrrmrvll/peril/internal/pubsub"
+	"github.com/csrrmrvll/peril/internal/routing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -27,11 +28,8 @@ func main() {
 	}
 	defer ch.Close()
 
-	err = pubsub.PublishJSON(ch, "exchange_name", "routing_key", struct {
-		Message string `json:"message"`
-	}{
-		Message: "Hello, RabbitMQ!",
-	})
+	err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey,
+		routing.PlayingState{IsPaused: true})
 	if err != nil {
 		log.Fatalf("could not publish message: %v", err)
 	}
