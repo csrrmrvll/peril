@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/csrrmrvll/peril/internal/gamelogic"
 	"github.com/csrrmrvll/peril/internal/pubsub"
 	"github.com/csrrmrvll/peril/internal/routing"
 
@@ -13,6 +14,8 @@ import (
 )
 
 func main() {
+	gamelogic.PrintServerHelp()
+
 	const rabbitConnString = "amqp://guest:guest@localhost:5672/"
 
 	conn, err := amqp.Dial(rabbitConnString)
@@ -28,10 +31,29 @@ func main() {
 	}
 	defer ch.Close()
 
-	err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey,
-		routing.PlayingState{IsPaused: true})
-	if err != nil {
-		log.Fatalf("could not publish message: %v", err)
+	for {
+		words := gamelogic.GetInput()
+		if len(words) == 0 {
+			continue
+		}
+		if words[0] == "pause" {
+			err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey,
+				routing.PlayingState{IsPaused: true})
+			if err != nil {
+				log.Fatalf("could not publish message: %v", err)
+			}
+		} else if words[0] == "resume" {
+			err = pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey,
+				routing.PlayingState{IsPaused: false})
+			if err != nil {
+				log.Fatalf("could not publish message: %v", err)
+			}
+		} else if words[0] == "quit" {
+			log.Println("Quitting server...")
+			break
+		} else {
+			log.Println("Unknown command")
+		}
 	}
 
 	// wait for ctrl+c
