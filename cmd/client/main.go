@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 
 	"github.com/csrrmrvll/peril/internal/gamelogic"
 	"github.com/csrrmrvll/peril/internal/pubsub"
@@ -40,9 +38,51 @@ func main() {
 	}
 	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
-	// wait for ctrl+c
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
-	fmt.Println("RabbitMQ connection closed.")
+	gs := gamelogic.NewGameState(username)
+
+	for {
+		words := gamelogic.GetInput()
+		if len(words) == 0 {
+			continue
+		}
+		switch words[0] {
+		case "spawn":
+			// fmt.Println("Publishing spawned game state")
+			err := gs.CommandSpawn(words)
+			if err != nil {
+				log.Printf("could not execute spawn command: %v", err)
+			}
+			// err = pubsub.PublishJSON(
+			// 	conn.Channel(),
+			// 	routing.ExchangePerilDirect,
+			// 	routing.PauseKey,
+			// 	routing.PlayingState{
+			// 		IsPaused: true,
+			// 	},
+			// )
+			// if err != nil {
+			// 	log.Printf("could not publish time: %v", err)
+			// }
+		case "move":
+			fmt.Println("Publishing moved game state")
+			move, err := gs.CommandMove(words)
+			if err != nil {
+				log.Printf("could not execute move command: %v", err)
+			} else {
+				fmt.Printf("Move executed: %v\n", move)
+			}
+		case "status":
+			gs.CommandStatus()
+		case "help":
+			gamelogic.PrintClientHelp()
+		case "spam":
+			fmt.Println("Spamming not allowed yet!")
+		case "quit":
+			gamelogic.PrintQuit()
+			return
+		default:
+			fmt.Printf("unknown command: %v\n", words[0])
+			continue
+		}
+	}
 }
