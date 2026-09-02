@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/csrrmrvll/peril/internal/gamelogic"
-	"github.com/csrrmrvll/peril/internal/pubsub"
-	"github.com/csrrmrvll/peril/internal/routing"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -24,6 +24,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not create channel: %v", err)
 	}
+
+	_, queue, err := pubsub.DeclareAndBind(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.GameLogSlug,
+		routing.GameLogSlug+".*",
+		pubsub.SimpleQueueDurable,
+	)
+	if err != nil {
+		log.Fatalf("could not subscribe to pause: %v", err)
+	}
+	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
 	gamelogic.PrintServerHelp()
 
