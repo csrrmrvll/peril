@@ -27,6 +27,19 @@ func main() {
 	}
 	gs := gamelogic.NewGameState(username)
 
+	queueMove := routing.ArmyMovesPrefix + "." + gs.GetUsername()
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		queueMove,
+		routing.ArmyMovesPrefix+".*",
+		pubsub.SimpleQueueTransient,
+		handlerMove(gs),
+	)
+	if err != nil {
+		log.Fatalf("could not subscribe to army moves: %v", err)
+	}
+
 	err = pubsub.SubscribeJSON(
 		conn,
 		routing.ExchangePerilDirect,
@@ -46,13 +59,28 @@ func main() {
 		}
 		switch words[0] {
 		case "move":
-			_, err := gs.CommandMove(words)
+			move, err := gs.CommandMove(words)
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
+			ch, err := conn.Channel()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			err = pubsub.PublishJSON(
+				ch,
+				routing.ExchangePerilTopic,
+				queueMove,
+				move,
+			)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println("Move published successfully!", move)
 
-			// TODO: publish the move
 		case "spawn":
 			err = gs.CommandSpawn(words)
 			if err != nil {
