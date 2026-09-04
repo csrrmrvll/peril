@@ -8,19 +8,25 @@ import (
 	"github.com/csrrmrvll/peril/internal/routing"
 )
 
-func handlerMove(gs *gamelogic.GameState) func(gamelogic.ArmyMove) pubsub.AckType {
-	return func(move gamelogic.ArmyMove) pubsub.AckType {
+func handlerMove(gs *gamelogic.GameState) func(gamelogic.ArmyMove) pubsub.Acktype {
+	return func(move gamelogic.ArmyMove) pubsub.Acktype {
 		defer fmt.Print("> ")
-		out := gs.HandleMove(move)
-		if out == gamelogic.MoveOutComeSafe || out == gamelogic.MoveOutcomeMakeWar {
+		moveOutcome := gs.HandleMove(move)
+		switch moveOutcome {
+		case gamelogic.MoveOutcomeSamePlayer:
+			return pubsub.NackDiscard
+		case gamelogic.MoveOutcomeSafe:
+			return pubsub.Ack
+		case gamelogic.MoveOutcomeMakeWar:
 			return pubsub.Ack
 		}
+		fmt.Println("error: unknown move outcome")
 		return pubsub.NackDiscard
 	}
 }
 
-func handlerPause(gs *gamelogic.GameState) func(routing.PlayingState) pubsub.AckType {
-	return func(ps routing.PlayingState) pubsub.AckType {
+func handlerPause(gs *gamelogic.GameState) func(routing.PlayingState) pubsub.Acktype {
+	return func(ps routing.PlayingState) pubsub.Acktype {
 		defer fmt.Print("> ")
 		gs.HandlePause(ps)
 		return pubsub.Ack
