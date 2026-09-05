@@ -45,6 +45,17 @@ func main() {
 	}
 	err = pubsub.SubscribeJSON(
 		conn,
+		routing.ExchangePerilTopic,
+		routing.WarRecognitionsPrefix,
+		routing.WarRecognitionsPrefix+".*",
+		pubsub.SimpleQueueDurable,
+		handlerWar(gs),
+	)
+	if err != nil {
+		log.Fatalf("could not subscribe to war declarations: %v", err)
+	}
+	err = pubsub.SubscribeJSON(
+		conn,
 		routing.ExchangePerilDirect,
 		routing.PauseKey+"."+gs.GetUsername(),
 		routing.PauseKey,
@@ -53,18 +64,6 @@ func main() {
 	)
 	if err != nil {
 		log.Fatalf("could not subscribe to pause: %v", err)
-	}
-
-	err = pubsub.SubscribeJSON(
-		conn,
-		routing.ExchangePerilTopic,
-		routing.WarRecognitionsPrefix,
-		routing.WarRecognitionsPrefix+".*",
-		pubsub.SimpleQueueDurable,
-		handlerWarRecognition(gs, publishCh),
-	)
-	if err != nil {
-		log.Fatalf("could not subscribe to war recognitions: %v", err)
 	}
 
 	for {
