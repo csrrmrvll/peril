@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/csrrmrvll/peril/internal/gamelogic"
 	"github.com/csrrmrvll/peril/internal/pubsub"
@@ -110,4 +111,17 @@ func main() {
 			fmt.Println("unknown command")
 		}
 	}
+}
+
+func publishGameLog(publishCh *amqp.Channel, username, msg string) error {
+	return pubsub.PublishGob(
+		publishCh,
+		routing.ExchangePerilTopic,
+		routing.GameLogSlug+"."+username,
+		routing.GameLog{
+			Username:    username,
+			CurrentTime: time.Now(),
+			Message:     msg,
+		},
+	)
 }
