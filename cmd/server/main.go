@@ -31,21 +31,11 @@ func main() {
 		routing.GameLogSlug,
 		routing.GameLogSlug+".*",
 		pubsub.SimpleQueueDurable,
-		func(msg routing.GameLog) pubsub.Acktype {
-			defer fmt.Print("> ")
-
-			err := gamelogic.WriteLog(msg)
-			if err != nil {
-				fmt.Printf("could not write game log: %v\n", err)
-				return pubsub.NackDiscard
-			}
-			return pubsub.Ack
-		},
+		handlerLogs(),
 	)
 	if err != nil {
-		log.Fatalf("could not subscribe to game: %v", err)
+		log.Fatalf("could not starting consuming logs: %v", err)
 	}
-	fmt.Printf("Subscribed to game log queue!\n")
 
 	gamelogic.PrintServerHelp()
 
