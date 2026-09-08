@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/csrrmrvll/peril/internal/gamelogic"
@@ -102,8 +103,25 @@ func main() {
 		case "help":
 			gamelogic.PrintClientHelp()
 		case "spam":
-			// TODO: publish n malicious logs
-			fmt.Println("Spamming not allowed yet!")
+			if len(words) < 2 {
+				fmt.Println("Usage: spam <message>")
+				continue
+			}
+			count, err := strconv.Atoi(words[1])
+			if err != nil {
+				fmt.Println("Usage: spam <message>")
+				continue
+			}
+			for range count {
+				logMsg := gamelogic.GetMaliciousLog()
+				pubsub.PublishGob(
+					publishCh,
+					routing.ExchangePerilTopic,
+					routing.GameLogSlug+"."+gs.GetUsername(),
+					routing.GameLog{Username: gs.GetUsername(), CurrentTime: time.Now(), Message: logMsg},
+				)
+			}
+			fmt.Println("Spammed message!")
 		case "quit":
 			gamelogic.PrintQuit()
 			return
